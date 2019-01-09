@@ -3,7 +3,7 @@
 import os
 import json
 import argparse
-from subprocess import Popen, PIPE, TimeoutExpired, run
+from subprocess import Popen, STDOUT, DEVNULL, TimeoutExpired, run
 from time import sleep
 
 
@@ -11,19 +11,13 @@ processes = []
 
 
 class Process:
-    def __init__(self, name, cmd, pwd):
+    def __init__(self, name, cmd, pwd, log_dir):
         self.name = name
         self.cmd = cmd
         self.pwd = pwd
+        self.log_file = os.path.join(log_dir, f'{name}.log')
+        self.log = None
         self.process = None
-
-    def start(self):
-        if not self.dead:
-            print(f'{self.name} is already running!')
-            return
-
-        print(f'Starting {self.name}...')
-        self.process = Popen(self.cmd, cwd=self.pwd, stdout=PIPE, stderr=PIPE)
 
     @property
     def dead(self):
@@ -37,111 +31,104 @@ class Process:
             return f'Stopped (Code {self.process.returncode})'
         return 'Running'
 
+    def start(self):
+        if not self.dead:
+            print(f'{self.name} is already running!')
+            return
+
+        if not self.log:
+            self.log = open(self.log_file, 'w+')
+
+        print(f'Starting {self.name}...')
+        self.process = Popen(
+            self.cmd, cwd=self.pwd, stdout=self.log, stderr=STDOUT
+        )
+
     def kill(self):
         if self.dead: return
 
-        print(f'Killing the {self.name} process...')
+        print(f'Stopping {self.name}...')
         if os.name == 'nt':
             # process.kill() seems to be basically worthless on Windows
             run(f'taskkill /F /T /PID {self.process.pid}')
 
         self.process.kill()
 
-    def kill_for_output(self):
-        if not self.process:
-            print(f'No output: the {self.name} process has not been started.')
-            return
+    def toggle(self):
+        self.start() if self.dead else self.kill()
 
-        try:
-            # This will block until the process terminates
-            print(f'Waiting for the {self.name} process to finish...')
-            out, err = self.process.communicate(timeout=5)
-        except TimeoutExpired:
-            print(f'Killing the {self.name} process.')
-            self.kill()
-            out, err = self.process.communicate()
-
-        print('\n----- STDOUT -----')
-        print(out.decode(encoding='utf-8'))
-        print('\n----- STDERR -----')
-        print(err.decode(encoding='utf-8'))
+    def cleanup(self):
+        self.kill()
+        if self.log and not self.log.closed:
+            self.log.close()
 
 
 def main(config):
     with open(config, 'r') as f:
-        processes.extend(Process(**p) for p in json.load(f))
+        config = json.load(f)
 
-    if not processes:
-        print('No processes to manage.')
-        return
+    # Prepare log directory
+    log_dir = config.get('logs', os.path.join('~', '.manager.logs'))
+    log_dir = os.path.expanduser(log_dir)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
-    # Main menu loop
-    while True:
-        clear()
-        print('PROCESS MANAGER\n')
+    try:
+        # Create process objects
+        processes.extend(
+            Process(**p, log_dir=log_dir) for p in config.get('processes', {})
+        )
 
-        for i, process in enumerate(processes):
-            print(f'{i + 1}: {process.name:{name_width()}}   {process.status}')
-        print('Q: Quit')
+        if not processes:
+            print('No processes to manage.')
+            return
 
-        selection = input('\nMake a selection: ').lower()
-        process, done = select_for_menu(selection)
+        # Main menu loop
+        while True:
+            menu()
+            selection = input('\nSelect a process to stop or start: ').lower()
+            process, quit = select(selection)
 
-        if done: break
-        if not process: continue
+            if quit: break
+            if not process: continue
 
-        # Process menu loop
-        while not done:
-            process_menu(process)
-            selection = input('Make a selection: ').lower()
-            done = select_for_process(process, selection)
+            process.toggle()
+            sleep(1)
 
-    for process in processes:
-        process.kill()
+    finally:
+        for process in processes:
+            process.cleanup()
 
 
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def name_width():
-    return max(15, max(len(p.name) for p in processes))
+def width(items, min_length=0):
+    return max(min_length, *(len(i) for i in items)) if items else min_length
 
 
-def process_menu(process):
+def menu():
     clear()
-    print('PROCESS MANAGER')
-    print(f'Process: {process.name:{name_width()}}   Status: {process.status}\n')
-    print(f'S: {"Start" if process.dead else "Stop"} Process')
-    print(f'O: {"" if process.dead else "Stop and "}View Output')
-    print('Q: Back to Menu\n')
+    print('PROCESS MANAGER\n')
+
+    nw = width((p.name for p in processes), 15)
+    sw = width(p.status for p in processes)
+    lw = width(p.log_file for p in processes)
+
+    for i, p in enumerate(processes):
+        print(f'{i + 1}: {p.name:{nw}}   {p.status:{sw}}   Log: {p.log_file:{lw}}')
+
+    print('\nQ: Quit')
 
 
-def select_for_menu(selection):
+def select(selection):
     if selection == 'q': return None, True
 
     try:
         return processes[int(selection) - 1], False
     except:
         return None, False
-
-
-def select_for_process(process, selection):
-    if selection == 's':
-        if process.dead:
-            process.start()
-        else:
-            process.kill()
-        sleep(1)
-
-    elif selection == 'o':
-        process.kill_for_output()
-        input('\nPress ENTER to continue.')
-
-    elif selection == 'q':
-        return True
-
-    return False
 
 
 if __name__ == '__main__':
