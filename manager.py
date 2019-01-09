@@ -81,7 +81,7 @@ def main(config):
         print('PROCESS MANAGER\n')
 
         for i, process in enumerate(processes):
-            print(f'{i + 1}: {process.name:{name_width()}} {process.status}')
+            print(f'{i + 1}: {process.name:{name_width()}}   {process.status}')
         print('Q: Quit')
 
         selection = input('\nMake a selection: ').lower()
@@ -111,7 +111,7 @@ def name_width():
 def process_menu(process):
     clear()
     print('PROCESS MANAGER')
-    print(f'Process: {process.name:{name_width()}} Status: {process.status}\n')
+    print(f'Process: {process.name:{name_width()}}   Status: {process.status}\n')
     print(f'S: {"Start" if process.dead else "Stop"} Process')
     print(f'O: {"" if process.dead else "Stop and "}View Output')
     print('Q: Back to Menu\n')
@@ -145,7 +145,7 @@ def select_for_process(process, selection):
 
 
 if __name__ == '__main__':
-    default_config = os.path.join('~', '.manager.json')
+    default_config = os.path.expanduser(os.path.join('~', '.manager.json'))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('config', nargs='?', default=default_config)
