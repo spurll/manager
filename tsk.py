@@ -5,6 +5,7 @@ import json
 import argparse
 from subprocess import Popen, STDOUT, DEVNULL, TimeoutExpired, run
 from time import sleep
+from math import ceil, log
 
 
 processes = []
@@ -14,21 +15,21 @@ class Process:
     def __init__(self, name, cmd, pwd, log_dir):
         self.name = name
         self.cmd = cmd
-        self.pwd = pwd
+        self.pwd = os.path.expanduser(pwd) if pwd else None
         self.log_file = os.path.join(log_dir, f'{name}.log')
         self.log = None
         self.process = None
 
     @property
     def dead(self):
-        return not self.process or self.process.returncode is not None
+        return not self.process or self.process.poll() is not None
 
     @property
     def status(self):
         if not self.process:
             return 'Not Started'
         if self.dead:
-            return f'Stopped (Code {self.process.returncode})'
+            return f'Stopped (Code {self.process.poll()})'
         return 'Running'
 
     def start(self):
@@ -68,7 +69,7 @@ def main(config):
         config = json.load(f)
 
     # Prepare log directory
-    log_dir = config.get('logs', os.path.join('~', '.manager.logs'))
+    log_dir = config.get('logs', os.path.join('~', '.tsk.logs'))
     log_dir = os.path.expanduser(log_dir)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -110,16 +111,18 @@ def width(items, min_length=0):
 
 def menu():
     clear()
-    print('PROCESS MANAGER\n')
+    print('TSK PROCESS MANAGER\n')
 
+    iw = ceil(log(len(processes) + 1, 10))
     nw = width((p.name for p in processes), 15)
     sw = width(p.status for p in processes)
     lw = width(p.log_file for p in processes)
 
+    print(f'{" " * iw}  {"PROCESS":{nw}}   {"STATUS":{sw}}   {"LOG FILE":{lw}}')
     for i, p in enumerate(processes):
-        print(f'{i + 1}: {p.name:{nw}}   {p.status:{sw}}   Log: {p.log_file:{lw}}')
+        print(f'{i + 1:>{iw}}: {p.name:{nw}}   {p.status:{sw}}   {p.log_file:{lw}}')
 
-    print('\nQ: Quit')
+    print(f'\n{"Q":>{iw}}: Quit')
 
 
 def select(selection):
@@ -132,7 +135,7 @@ def select(selection):
 
 
 if __name__ == '__main__':
-    default_config = os.path.expanduser(os.path.join('~', '.manager.json'))
+    default_config = os.path.expanduser(os.path.join('~', '.tsk.json'))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('config', nargs='?', default=default_config)
