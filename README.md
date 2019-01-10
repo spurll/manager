@@ -48,6 +48,11 @@ Any existing log files are overwritten when tsk is started.
 If no `logs` directory is specified in the configuration file, it defaults to
 `~/.tsk.log/`.
 
+# Thanks
+
+Cross-platform `getch` implementation from [this Gist](https://gist.github.com/jfktrey/8928865)
+by jfktrey.
+
 # License Information
 
 Written by Gem Newman. [Website](http://spurll.com) | [GitHub](https://github.com/spurll/) | [Twitter](https://twitter.com/spurll)

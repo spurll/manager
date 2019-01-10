@@ -1,67 +1,17 @@
 #!/usr/bin/python3
 
 import os
+import platform
 import json
 import argparse
-from subprocess import Popen, STDOUT, DEVNULL, TimeoutExpired, run
+from getch import getch
+from process import Process
 from time import sleep
 from math import ceil, log
 
 
 processes = []
-
-
-class Process:
-    def __init__(self, name, cmd, pwd, log_dir):
-        self.name = name
-        self.cmd = cmd
-        self.pwd = os.path.expanduser(pwd) if pwd else None
-        self.log_file = os.path.join(log_dir, f'{name}.log')
-        self.log = None
-        self.process = None
-
-    @property
-    def dead(self):
-        return not self.process or self.process.poll() is not None
-
-    @property
-    def status(self):
-        if not self.process:
-            return 'Not Started'
-        if self.dead:
-            return f'Stopped (Code {self.process.poll()})'
-        return 'Running'
-
-    def start(self):
-        if not self.dead:
-            print(f'{self.name} is already running!')
-            return
-
-        if not self.log:
-            self.log = open(self.log_file, 'w+')
-
-        print(f'Starting {self.name}...')
-        self.process = Popen(
-            self.cmd, cwd=self.pwd, stdout=self.log, stderr=STDOUT
-        )
-
-    def kill(self):
-        if self.dead: return
-
-        print(f'Stopping {self.name}...')
-        if os.name == 'nt':
-            # process.kill() seems to be basically worthless on Windows
-            run(f'taskkill /F /T /PID {self.process.pid}')
-
-        self.process.kill()
-
-    def toggle(self):
-        self.start() if self.dead else self.kill()
-
-    def cleanup(self):
-        self.kill()
-        if self.log and not self.log.closed:
-            self.log.close()
+log_dir = os.path.join('~', '.tsk.logs')
 
 
 def main(config):
@@ -69,7 +19,8 @@ def main(config):
         config = json.load(f)
 
     # Prepare log directory
-    log_dir = config.get('logs', os.path.join('~', '.tsk.logs'))
+    global log_dir
+    log_dir = config.get('logs', log_dir)
     log_dir = os.path.expanduser(log_dir)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -85,16 +36,18 @@ def main(config):
             return
 
         # Main menu loop
-        while True:
+        done = False
+        prompt = '\nSelect a process to stop or start: '
+        while not done:
             menu()
-            selection = input('\nSelect a process to stop or start: ').lower()
-            process, quit = select(selection)
 
-            if quit: break
-            if not process: continue
+            if len(processes) > 9:
+                selection = input(prompt).lower()
+            else:
+                print(prompt)
+                selection = getch().decode('utf-8').lower()
 
-            process.toggle()
-            sleep(1)
+            done = select(selection)
 
     finally:
         for process in processes:
@@ -102,7 +55,16 @@ def main(config):
 
 
 def clear():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system('cls' if platform.system() == 'Windows' else 'clear')
+
+
+def open_path(path):
+    if platform.system() == 'Windows':
+        os.startfile(path)
+    elif platform.system() == 'Darwin':
+        subprocess.Popen(['open', path])
+    else:
+        subprocess.Popen(['xdg-open', path])
 
 
 def width(items, min_length=0):
@@ -118,20 +80,35 @@ def menu():
     sw = width(p.status for p in processes)
     lw = width(p.log_file for p in processes)
 
-    print(f'{" " * iw}  {"PROCESS":{nw}}   {"STATUS":{sw}}   {"LOG FILE":{lw}}')
-    for i, p in enumerate(processes):
-        print(f'{i + 1:>{iw}}: {p.name:{nw}}   {p.status:{sw}}   {p.log_file:{lw}}')
+    print(
+        f'{" " * iw}  {"PROCESS":{nw}}   {"STATUS":{sw}}   {"LOG FILE":{lw}}'
+    )
+    for i, process in enumerate(processes):
+        print(
+            f'{i + 1:>{iw}}: {process.name:{nw}}   '
+            f'{process.status:{sw}}   {process.log_file:{lw}}'
+        )
 
-    print(f'\n{"Q":>{iw}}: Quit')
+    print(f'\n{"L":>{iw}}: View Logs')
+    print(f'{"Q":>{iw}}: Quit')
 
 
 def select(selection):
-    if selection == 'q': return None, True
+    if selection == 'q':
+        return True
+
+    if selection == 'l':
+        open_path(log_dir)
+        return False
 
     try:
-        return processes[int(selection) - 1], False
+        process = processes[int(selection) - 1]
     except:
-        return None, False
+        return False
+
+    process.toggle()
+    sleep(1)
+    return False
 
 
 if __name__ == '__main__':
