@@ -28,7 +28,7 @@ to be managed, and optionally the directory in which to place the logs:
   [
     {
       "name": "DB",
-      "cmd": "cmd.exe /c \"docker-compose up database\"",
+      "cmd": "docker-compose up database",
       "pwd": "~\\workspace"
     },
     {
@@ -43,7 +43,7 @@ to be managed, and optionally the directory in which to place the logs:
 ## Logs
 
 Each process is logged in its own log file in the specified `logs` directory.
-Any existing log files are overwritten when tsk is started.
+Any existing log files are appended (meaning that they can get large).
 
 If no `logs` directory is specified in the configuration file, it defaults to
 `~/.tsk.log/`.
