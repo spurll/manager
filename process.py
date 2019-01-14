@@ -1,6 +1,7 @@
 import os
 import platform
 from subprocess import Popen, run, STDOUT
+from getch import getch
 
 
 class Process:
@@ -33,9 +34,12 @@ class Process:
             self.log = open(self.log_file, 'w+')
 
         print(f'Starting {self.name}...')
-        self.process = Popen(
-            self.cmd, cwd=self.pwd, stdout=self.log, stderr=STDOUT
-        )
+        try:
+            self.process = Popen(
+                self.cmd, cwd=self.pwd, stdout=self.log, stderr=STDOUT
+            )
+        except Exception as e:
+            return e
 
     def kill(self):
         if self.dead: return
@@ -48,7 +52,7 @@ class Process:
         self.process.kill()
 
     def toggle(self):
-        self.start() if self.dead else self.kill()
+        return self.start() if self.dead else self.kill()
 
     def cleanup(self):
         self.kill()

@@ -45,7 +45,9 @@ def main(config):
                 selection = input(prompt).lower()
             else:
                 print(prompt)
-                selection = getch().decode('utf-8').lower()
+                selection = getch()
+                if b' ' <= selection <= b'}':
+                    selection = selection.decode('utf-8').lower()
 
             done = select(selection)
 
@@ -106,8 +108,15 @@ def select(selection):
     except:
         return False
 
-    process.toggle()
-    sleep(1)
+    e = process.toggle()
+
+    if e:
+        print(f'\nError starting {process.cmd} with "{process.cmd}":\n{e}')
+        print('\nPress any key to continue.')
+        getch()
+    else:
+        sleep(1)
+
     return False
 
 
