@@ -1,23 +1,27 @@
 import os.path
 import platform
-from subprocess import Popen, run, STDOUT
+from subprocess import Popen, run, STDOUT, TimeoutExpired
 from getch import getch
 from logroll import logroll
 
 
 class Process:
     def __init__(
-        self, name, cmd, log_dir, cwd=None, stop=None, log_archive=10
+        self, name, cmd, log_dir,
+        cwd=None,
+        stop=None,
+        timeout=None,
+        log_archive=10
     ):
         self.name = name
         self.cmd = cmd
         self.cwd = os.path.expanduser(cwd) if cwd else None
         self.log_file = os.path.join(log_dir, f'{name}.log')
         self.stop_cmd = stop
+        self.stop_timeout = timeout if timeout else 30
         self.log_archive = log_archive
         self.log = None
         self.process = None
-        self.stop_issued = False
 
     @property
     def stopped(self):
@@ -33,8 +37,6 @@ class Process:
             return 'Not Started'
         if self.stopped:
             return f'Stopped (Code {self.process.poll()})'
-        if self.stop_issued:
-            return f'Stop Issued'
         return 'Running'
 
     def start(self):
@@ -51,7 +53,6 @@ class Process:
 
         print(f'Starting {self.name}...')
         try:
-            self.stop_issued = False
             self.process = Popen(
                 self.cmd, cwd=self.cwd, stdout=self.log, stderr=STDOUT
             )
@@ -63,24 +64,31 @@ class Process:
             self.close_log()
             return
 
-        if self.stop_issued or not self.stop_cmd:
-            print(f'Killing {self.name} command...')
-            self.kill()
-        else:
-            self.stop_issued = True
+        if self.stop_cmd:
             print(f'Issuing stop command for {self.name}...')
-            Popen(self.stop_cmd, cwd=self.cwd, stdout=self.log, stderr=STDOUT)
+            try:
+                stop_proc = run(
+                    self.stop_cmd,
+                    cwd=self.cwd,
+                    stdout=self.log,
+                    stderr=STDOUT,
+                    timeout=self.stop_timeout
+                )
+            except TimeoutExpired:
+                print(f'Stop command for {self.name} timed out.')
+                self.kill()
+
             self.close_log()
+
+        else:
+            self.kill()
 
     def kill(self):
         if self.stopped:
             self.close_log()
             return
 
-        if platform.system() == 'Windows':
-            # process.kill() seems to be basically worthless on Windows
-            run(f'taskkill /F /T /PID {self.process.pid}')
-
+        print(f'Killing {self.name}...')
         self.process.kill()
         self.close_log()
 

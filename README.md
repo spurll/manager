@@ -37,22 +37,45 @@ to be managed, and optionally the directory in which to place the logs:
     {
       "name": "Azure Storage Emulator",
       "cmd": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" start -inprocess",
-      "stop": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" stop"
+      "stop": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" stop",
+      "timeout": 10
     }
   ]
 }
 ```
 
-## Starting and Stopping Processes
+### Process Fields
 
-Each process specified in the configuration file is assigned a number. To start the
-process, press the appropriate key. To stop it, press the key again. If the configuration
-file specifies a specific stop command, this command will be issued; if no stop command is
-specified (or if the process has already been asked to stop and remains running), tsk will
-attempt to force the process to stop by issuing a kill command (or using `taskkill` on
-Windows).
+* `name`: The name tsk will use to refer to this process
+* `cmd`: The command that will be issued to start the process
+* `stop` (optional): The command that will be issued to stop the process
+* `cwd` (optional): The directory to use as the current working directory for both `cmd`
+  and `stop`
+* `timeout` (optional): The number of seconds to wait after issuing `stop` before
+  killing the process (defaults to 30 seconds)
 
-## Logs
+# Managing Processes
+
+Each process specified in the configuration file is assigned a number. If the process is
+not running, pressing the associated key will start the process. If the process is already
+running, pressing the key will stop the process.
+
+## Process Status
+
+The status listed for each process is updated when the screen is refreshed. To refresh,
+simply press any key other than those listed for process management (e.g., spacebar).
+
+## Stopping a Process
+
+If the configuration file specifies a specific stop command for the process, attempting to
+stop the process will result in this command being issued, at which point tsk will wait
+for the process to stop. An optional `timeout` for the stop command may be specified
+(defaulting to 30 seconds).
+
+If no stop command is specified (or if the stop process times out), tsk will force the
+process to stop by issuing a kill command.
+
+# Logging
 
 Each process is logged in its own log file in the specified `logs` directory.
 If no `logs` directory is specified in the configuration file, it defaults to
