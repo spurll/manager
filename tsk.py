@@ -4,6 +4,7 @@ import os
 import platform
 import json
 import argparse
+import webbrowser
 from getch import getch
 from process import Process
 from time import sleep
@@ -12,10 +13,11 @@ from math import ceil, log
 
 processes = []
 log_dir = os.path.join('~', '.tsk.logs')
+config_file = ''
 
 
-def main(config):
-    with open(config, 'r') as f:
+def main():
+    with open(config_file, 'r') as f:
         config = json.load(f)
 
     # Prepare log directory
@@ -93,13 +95,18 @@ def menu():
             f'{process.status:{sw}}   {process.log_file:{lw}}'
         )
 
-    print(f'\n{"L":>{iw}}: View Logs')
+    print(f'\n{"C":>{iw}}: View Configuration')
+    print(f'{"L":>{iw}}: View Logs')
     print(f'{"Q":>{iw}}: Quit')
 
 
 def select(selection):
     if selection == 'q':
         return True
+
+    if selection == 'c':
+        webbrowser.open(config_file)
+        return False
 
     if selection == 'l':
         open_path(log_dir)
@@ -129,4 +136,6 @@ if __name__ == '__main__':
     parser.add_argument('config', nargs='?', default=default_config)
     args = parser.parse_args()
 
-    main(args.config)
+    config_file = args.config
+
+    main()
