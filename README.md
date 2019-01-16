@@ -4,13 +4,14 @@ Bare-bones cross-platform process dispatcher and manager.
 
 # Usage
 
+Create a configuration file, then run with:
+
 ```
-python3 tsk.py [-h] [config]
+python3 tsk.py [config]
 ```
 
-## Optional Arguments
-
-* `config`: the path to a JSON configuration file (it defaults to `~/.tsk.json`)
+where `config` is the (optional) path to a JSON configuration file, defaulting to
+`~/.tsk.json`.
 
 ## Requirements
 
@@ -24,29 +25,42 @@ to be managed, and optionally the directory in which to place the logs:
 ```json
 {
   "logs": "~\\.tsk.log",
+  "log-archive": 5,
   "processes":
   [
     {
       "name": "DB",
       "cmd": "docker-compose up database",
-      "pwd": "~\\workspace"
+      "stop": "docker-compose stop database",
+      "cwd": "~\\workspace"
     },
     {
       "name": "Azure Storage Emulator",
       "cmd": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" start -inprocess",
-      "pwd": null
+      "stop": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" stop"
     }
   ]
 }
 ```
 
+## Starting and Stopping Processes
+
+Each process specified in the configuration file is assigned a number. To start the
+process, press the appropriate key. To stop it, press the key again. If the configuration
+file specifies a specific stop command, this command will be issued; if no stop command is
+specified (or if the process has already been asked to stop and remains running), tsk will
+attempt to force the process to stop by issuing a kill command (or using `taskkill` on
+Windows).
+
 ## Logs
 
 Each process is logged in its own log file in the specified `logs` directory.
-Any existing log files are appended (meaning that they can get large).
-
 If no `logs` directory is specified in the configuration file, it defaults to
 `~/.tsk.log/`.
+
+When a process is started, any existing log file is placed in a zip archive, and only the
+last few are kept. The number of past logs to keep is specified by `log-archive` in the
+configuration file (defaulting to 5).
 
 # Thanks
 

@@ -27,8 +27,10 @@ def main(config):
 
     try:
         # Create process objects
+        log_archive = config.get('log-archive', 5)
         processes.extend(
-            Process(**p, log_dir=log_dir) for p in config.get('processes', {})
+            Process(**p, log_dir=log_dir, log_archive=log_archive)
+            for p in config.get('processes', {})
         )
 
         if not processes:
