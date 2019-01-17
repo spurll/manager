@@ -2,6 +2,8 @@
 
 Bare-bones cross-platform process dispatcher and manager.
 
+![Screenshot](/screenshots/tsk.png?raw=true)
+
 # Usage
 
 Create a configuration file, then run with:
@@ -35,7 +37,7 @@ to be managed, and optionally the directory in which to place the logs:
       "cwd": "~\\workspace"
     },
     {
-      "name": "Azure Storage Emulator",
+      "name": "Storage Emulator",
       "cmd": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" start -inprocess",
       "stop": "\"C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\Storage Emulator\\AzureStorageEmulator.exe\" stop",
       "timeout": 10
