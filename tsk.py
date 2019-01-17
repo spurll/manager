@@ -12,13 +12,13 @@ from math import ceil, log
 
 
 processes = []
-log_dir = os.path.join('~', '.tsk.logs')
+log_dir = os.path.join('~', '.tsk.log')
+log_archive = 5
 config_file = ''
 
 
 def main():
-    with open(config_file, 'r') as f:
-        config = json.load(f)
+    config = load_config()
 
     # Prepare log directory
     global log_dir
@@ -29,7 +29,8 @@ def main():
 
     try:
         # Create process objects
-        log_archive = config.get('log-archive', 5)
+        global log_archive
+        log_archive = config.get('log-archive', log_archive)
         processes.extend(
             Process(**p, log_dir=log_dir, log_archive=log_archive)
             for p in config.get('processes', {})
@@ -129,13 +130,49 @@ def select(selection):
     return False
 
 
+def load_config():
+    if not os.path.exists(config_file):
+        create_config()
+
+    with open(config_file, 'r') as f:
+        return json.load(f)
+
+
+def create_config():
+    # Ensure the parent directories exist
+    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+
+    # Create a dummy config
+    config = {
+        'logs': log_dir,
+        'log-archive': log_archive,
+        'processes': [
+            {
+                'name': 'Text Editor',
+                'cmd': 'notepad.exe' if platform.system() == 'Windows'
+                    else 'textedit' if platform.system() == 'Darwin'
+                    else 'gedit'
+            },
+            {
+                'name': 'List Home Directory',
+                'cmd': 'dir' if platform.system() == 'Windows' else 'ls -l',
+                'cwd': '~'
+            }
+        ]
+    }
+
+    # Write dummy config to config file
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=4)
+
+
 if __name__ == '__main__':
-    default_config = os.path.expanduser(os.path.join('~', '.tsk.json'))
+    default_config = os.path.join('~', '.tsk.json')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('config', nargs='?', default=default_config)
     args = parser.parse_args()
 
-    config_file = args.config
+    config_file = os.path.abspath(os.path.expanduser(args.config))
 
     main()

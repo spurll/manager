@@ -17,9 +17,9 @@ where `config` is the (optional) path to a JSON configuration file, defaulting t
 
 * Python 3.6+
 
-## Setup
+## Configuration
 
-Prior to running, you must create a JSON configuration file that specifies the processes
+Prior to running, you should create a JSON configuration file that specifies the processes
 to be managed, and optionally the directory in which to place the logs:
 
 ```json
@@ -43,6 +43,8 @@ to be managed, and optionally the directory in which to place the logs:
   ]
 }
 ```
+
+If tsk cannot find a configuration file at startup, it will create an example file.
 
 ### Process Fields
 
