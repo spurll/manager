@@ -34,7 +34,14 @@ to be managed, and optionally the directory in which to place the logs:
       "name": "DB",
       "cmd": "docker-compose up database",
       "stop": "docker-compose stop database",
-      "cwd": "~\\workspace"
+      "cwd": "~\\Development\\docker-workspace"
+    },
+    {
+      "name": "Webpack",
+      "cmd": "yarn develop",
+      "cwd": "~\\Development\\Application\\Application.Web",
+      "shell": true,
+      "taskkill": true
     },
     {
       "name": "Storage Emulator",
@@ -55,6 +62,9 @@ If tsk cannot find a configuration file at startup, it will create an example fi
 * `stop` (optional): The command that will be issued to stop the process
 * `cwd` (optional): The directory to use as the current working directory for both `cmd`
   and `stop`
+* `shell` (optional): Set `shell` to `true` to start the process in an intermediate shell
+* `taskkill` (optional, Windows only): When killing a process, uses Windows' `taskkill`
+  command, which can help clean up child processes
 * `timeout` (optional): The number of seconds to wait after issuing `stop` before
   killing the process (defaults to 30 seconds)
 
@@ -77,7 +87,9 @@ for the process to stop. An optional `timeout` for the stop command may be speci
 (defaulting to 30 seconds).
 
 If no stop command is specified (or if the stop process times out), tsk will force the
-process to stop by issuing a kill command.
+process to stop by issuing a kill command. On Windows, if `taskkill` is set to `true`, the
+`taskkill` command will be used (this can help clean up child processes that may be bound
+to ports or writing to logs).
 
 # Logging
 
