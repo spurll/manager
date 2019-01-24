@@ -11,6 +11,8 @@ class Process:
         cwd=None,
         stop=None,
         timeout=None,
+        shell=False,
+        taskkill=False,
         log_archive=10
     ):
         self.name = name
@@ -19,6 +21,8 @@ class Process:
         self.log_file = os.path.join(log_dir, f'{name}.log')
         self.stop_cmd = stop
         self.stop_timeout = timeout if timeout else 30
+        self.shell = shell
+        self.taskkill = taskkill
         self.log_archive = log_archive
         self.log = None
         self.process = None
@@ -54,7 +58,11 @@ class Process:
         print(f'Starting {self.name}...')
         try:
             self.process = Popen(
-                self.cmd, cwd=self.cwd, stdout=self.log, stderr=STDOUT
+                self.cmd,
+                cwd=self.cwd,
+                shell=self.shell,
+                stdout=self.log,
+                stderr=STDOUT
             )
         except Exception as e:
             return e
@@ -89,6 +97,11 @@ class Process:
             return
 
         print(f'Killing {self.name}...')
+
+        if self.taskkill and platform.system() == 'Windows':
+            # process.kill() sometimes has problems killing child processes
+            run(f'taskkill /F /T /PID {self.process.pid}')
+
         self.process.kill()
         self.close_log()
 
@@ -97,7 +110,10 @@ class Process:
 
     def close_log(self):
         if self.logging:
-            self.process.wait()
+            try:
+                self.process.wait(timeout=10)
+            except TimeoutExpired:
+                print('Timed out waiting for log file to close.')
             self.log.flush()
             self.log.close()
 
